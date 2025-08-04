@@ -1,1171 +1,781 @@
 {
-  "name": "Customer Care Workflow",
+  "name": "SkyNet Telecom - Voice AI Agent",
   "nodes": [
     {
+      "parameters": {},
+      "id": "2816f5c5-2396-4a47-a87b-400a40d50711",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        -20,
+        300
+      ]
+    },
+    {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "webhook",
-        "responseMode": "responseNode",
+        "path": "a4b2c1d9-e3f4-4a5b-8c6d-7e8f9a0b1c2d",
         "options": {}
       },
-      "id": "webhook-trigger",
-      "name": "Webhook Trigger",
+      "id": "e98e4c75-3433-4f51-b844-46c57f724f11",
+      "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 300],
-      "webhookId": "customer-care-webhook"
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "a4b2c1d9-e3f4-4a5b-8c6d-7e8f9a0b1c2d"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "welcomeMessage",
+              "value": "Welcome to SkyNet Telecom! How can I help you today? Please say one of the following: 'Billing', 'Network Issue', 'Recharge', or 'Talk to agent'."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b3e0a2d1-5c7f-4b1e-9a0f-8d7e6c5a4b3c",
+      "name": "Set Welcome Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.some-tts-provider.com/v1/speech",
+        "authentication": "headerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.welcomeMessage }}"
+            },
+            {
+              "name": "voice_id",
+              "value": "uk-professional-female"
+            }
+          ]
+        },
+        "options": {
+          "note": "This is a placeholder for a Text-to-Speech service like ElevenLabs, Google TTS, etc. You will need to configure the URL, authentication, and body according to your chosen provider."
+        }
+      },
+      "id": "f5d1e8c7-a9b3-4c6d-8e2f-1a0b3c4d5e6f",
+      "name": "TTS: Welcome Greeting",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "userInput",
+              "value": "I have a problem with my bill, it seems too high this month."
+            }
+          ]
+        },
+        "options": {
+          "note": "SIMULATION: This node simulates capturing the user's voice input. In a real workflow, this would be replaced by a Twilio 'Gather' node or similar voice capture integration. \n\nEDIT THE VALUE HERE TO TEST DIFFERENT SCENARIOS."
+        }
+      },
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Simulate Voice Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "jsonBody": "={{ { \"contents\": [ { \"parts\": [ { \"text\": \"You are an intent classification system for SkyNet Telecom, a UK-based telecommunications company. Your goal is to understand the user's query and classify it into one of four exact categories: 'Billing', 'Network Issue', 'Recharge', or 'Talk to agent'. Do not add any explanation or conversational text. Respond ONLY with a valid JSON object containing the determined intent, like this: {\\\"intent\\\": \\\"Billing\\\"}. User query: '\" + $json.userInput + \"'\" } ] } ] } }}",
+        "options": {}
+      },
+      "id": "e6f7a8b9-c0d1-4e2f-8a9b-3c4d5e6f7a8b",
+      "name": "GEMINI: Classify Intent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const responseText = $json.candidates[0].content.parts[0].text;\ntry {\n  const parsedJson = JSON.parse(responseText);\n  return { intent: parsedJson.intent };\n} catch (error) {\n  return { intent: 'Fallback' }; // Default to Fallback if JSON is malformed\n}"
+      },
+      "id": "d9e8f7a6-b5c4-4d3e-9f8a-7b6c5d4e3f2a",
+      "name": "Parse Intent JSON",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
+          "string": [
             {
-              "id": "priority-check",
-              "leftValue": "={{ $json.priority }}",
-              "rightValue": "high",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
+              "value1": "={{ $json.intent }}",
+              "operation": "equal",
+              "value2": "Billing"
+            },
+            {
+              "value1": "={{ $json.intent }}",
+              "operation": "equal",
+              "value2": "Network Issue"
+            },
+            {
+              "value1": "={{ $json.intent }}",
+              "operation": "equal",
+              "value2": "Recharge"
+            },
+            {
+              "value1": "={{ $json.intent }}",
+              "operation": "equal",
+              "value2": "Talk to agent"
             }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
+          ]
+        }
       },
-      "id": "priority-router",
-      "name": "Priority Router",
+      "id": "c8d7e6f5-a4b3-4c2d-9e8f-6a5b4c3d2e1f",
+      "name": "IF: Route by Intent",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [460, 300]
+      "position": [
+        1600,
+        300
+      ]
     },
     {
       "parameters": {
-        "resource": "ticket",
-        "operation": "create",
-        "additionalFields": {
-          "subject": "={{ $json.subject }}",
-          "description": "={{ $json.description }}",
-          "priority": "={{ $json.priority }}",
-          "status": "new",
-          "requester_id": "={{ $json.customer_id }}",
-          "tags": "={{ $json.tags }}"
-        }
-      },
-      "id": "create-ticket",
-      "name": "Create Ticket",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [680, 200]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "create",
-        "additionalFields": {
-          "subject": "URGENT: {{ $json.subject }}",
-          "description": "={{ $json.description }}\n\nPriority: HIGH\nCustomer ID: {{ $json.customer_id }}",
-          "priority": "urgent",
-          "status": "new",
-          "requester_id": "={{ $json.customer_id }}",
-          "tags": "={{ $json.tags }},urgent,escalation"
-        }
-      },
-      "id": "create-urgent-ticket",
-      "name": "Create Urgent Ticket",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [680, 400]
-    },
-    {
-      "parameters": {
-        "resource": "user",
-        "operation": "get",
-        "userId": "={{ $json.requester_id }}"
-      },
-      "id": "get-customer-info",
-      "name": "Get Customer Info",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [900, 200]
-    },
-    {
-      "parameters": {
-        "resource": "user",
-        "operation": "get",
-        "userId": "={{ $json.requester_id }}"
-      },
-      "id": "get-urgent-customer-info",
-      "name": "Get Urgent Customer Info",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [900, 400]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
+        "values": {
+          "string": [
             {
-              "id": "vip-check",
-              "leftValue": "={{ $json.user.organization_id }}",
-              "rightValue": "vip",
-              "operator": {
-                "type": "string",
-                "operation": "contains"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "vip-router",
-      "name": "VIP Router",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [1120, 200]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "vip-check-urgent",
-              "leftValue": "={{ $json.user.organization_id }}",
-              "rightValue": "vip",
-              "operator": {
-                "type": "string",
-                "operation": "contains"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "vip-router-urgent",
-      "name": "VIP Router Urgent",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [1120, 400]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "update",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "assignee_id": "vip-agent-1",
-          "priority": "high",
-          "tags": "={{ $json.tags }},vip"
-        }
-      },
-      "id": "assign-vip-agent",
-      "name": "Assign VIP Agent",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1340, 100]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "update",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "assignee_id": "senior-agent-1",
-          "priority": "urgent",
-          "tags": "={{ $json.tags }},vip,urgent"
-        }
-      },
-      "id": "assign-senior-vip-agent",
-      "name": "Assign Senior VIP Agent",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1340, 300]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "update",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "assignee_id": "general-agent-1",
-          "tags": "={{ $json.tags }},auto-assigned"
-        }
-      },
-      "id": "assign-general-agent",
-      "name": "Assign General Agent",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1340, 500]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "update",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "assignee_id": "senior-agent-2",
-          "priority": "urgent",
-          "tags": "={{ $json.tags }},urgent,auto-assigned"
-        }
-      },
-      "id": "assign-senior-agent",
-      "name": "Assign Senior Agent",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1340, 700]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "createComment",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "body": "Ticket automatically created and assigned. Our team will review your request shortly.\n\nTicket ID: {{ $json.id }}\nPriority: {{ $json.priority }}\nAssigned to: {{ $json.assignee_id }}"
-        }
-      },
-      "id": "add-auto-comment",
-      "name": "Add Auto Comment",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1560, 200]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "createComment",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "body": "URGENT TICKET: This ticket has been automatically escalated due to high priority. A senior agent has been assigned.\n\nTicket ID: {{ $json.id }}\nPriority: {{ $json.priority }}\nAssigned to: {{ $json.assignee_id }}"
-        }
-      },
-      "id": "add-urgent-comment",
-      "name": "Add Urgent Comment",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1560, 400]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "createComment",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "body": "VIP CUSTOMER: This ticket has been assigned to a VIP specialist.\n\nTicket ID: {{ $json.id }}\nPriority: {{ $json.priority }}\nAssigned to: {{ $json.assignee_id }}"
-        }
-      },
-      "id": "add-vip-comment",
-      "name": "Add VIP Comment",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1560, 600]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "createComment",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "body": "URGENT VIP TICKET: This ticket has been automatically escalated and assigned to a senior VIP specialist.\n\nTicket ID: {{ $json.id }}\nPriority: {{ $json.priority }}\nAssigned to: {{ $json.assignee_id }}"
-        }
-      },
-      "id": "add-urgent-vip-comment",
-      "name": "Add Urgent VIP Comment",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1560, 800]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "createComment",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "body": "Ticket assigned to general support team.\n\nTicket ID: {{ $json.id }}\nPriority: {{ $json.priority }}\nAssigned to: {{ $json.assignee_id }}"
-        }
-      },
-      "id": "add-general-comment",
-      "name": "Add General Comment",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1560, 1000]
-    },
-    {
-      "parameters": {
-        "resource": "ticket",
-        "operation": "createComment",
-        "ticketId": "={{ $json.id }}",
-        "additionalFields": {
-          "body": "URGENT TICKET: Assigned to senior support team.\n\nTicket ID: {{ $json.id }}\nPriority: {{ $json.priority }}\nAssigned to: {{ $json.assignee_id }}"
-        }
-      },
-      "id": "add-senior-comment",
-      "name": "Add Senior Comment",
-      "type": "n8n-nodes-base.zendesk",
-      "typeVersion": 1,
-      "position": [1560, 1200]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
+              "name": "billingQuestion",
+              "value": "I understand you have a billing query. Are you inquiring about postpaid or prepaid billing?"
             }
           ]
         },
+        "options": {}
+      },
+      "id": "b7a6c5d4-e3f2-4a1b-9c8d-5e4f3a2b1c0d",
+      "name": "Set Billing Question",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.some-tts-provider.com/v1/speech",
+        "authentication": "headerAuth",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
             {
               "name": "text",
-              "value": "New ticket created: {{ $json.subject }}\nPriority: {{ $json.priority }}\nTicket ID: {{ $json.id }}"
+              "value": "={{ $json.billingQuestion }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "slack-notification",
-      "name": "Slack Notification",
+      "id": "a6b5c4d3-e2f1-4a0b-9c7d-4e3f2a1b0c9d",
+      "name": "TTS: Billing Question",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [1780, 200]
+      "typeVersion": 4.1,
+      "position": [
+        2060,
+        -120
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "values": {
+          "string": [
             {
-              "name": "Content-Type",
-              "value": "application/json"
+              "name": "billingAnswer",
+              "value": "It's for my postpaid account."
             }
           ]
         },
+        "options": {
+          "note": "SIMULATION: This node simulates the user's second response. Edit the value to test."
+        }
+      },
+      "id": "f4e3d2c1-b0a9-4988-8c7d-6e5f4a3b2c1d",
+      "name": "Simulate Billing Answer",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        2280,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=' + $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "jsonBody": "={{ { \"contents\": [ { \"parts\": [ { \"text\": \"You are a polite and professional customer service agent for SkyNet Telecom, with a formal UK accent and tone. The user's initial query was: '\" + $('Simulate Voice Input').item.json.userInput + \"'. You have already classified this as a billing issue. The user has now clarified their issue with this statement: '\" + $json.billingAnswer + \"'. Provide a helpful, specific, and empathetic response to resolve their query. Do not ask them to hold. Directly provide information or next steps.\" } ] } ] } }}",
+        "options": {}
+      },
+      "id": "e3d2c1b0-a988-4977-8c6d-5e4f3a2b1c0d",
+      "name": "GEMINI: Resolve Billing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2520,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.some-tts-provider.com/v1/speech",
+        "authentication": "headerAuth",
+        "sendBody": true,
+        "jsonBody": "={{ { \"text\": $json.candidates[0].content.parts[0].text } }}",
+        "options": {}
+      },
+      "id": "d2c1b0a9-8877-4966-8c5d-4e3f2a1b0c9d",
+      "name": "TTS: Billing Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2740,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "networkQuestion",
+              "value": "I see you're having a network issue. Is it related to call drops, mobile data, or the coverage area?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1b0a988-7766-4955-8c4d-3e2f1a0b9c8d",
+      "name": "Set Network Question",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "rechargeQuestion",
+              "value": "Certainly. Are you looking to hear about our recent offers, or would you like to do a quick recharge now?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b0a98877-6655-4944-8c3d-2e1f0a9b8c7d",
+      "name": "Set Recharge Question",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "agentMessage",
+              "value": "Of course. Please hold a moment while I connect you to a live agent."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a9887766-5544-4933-8c2d-1e0f9a8b7c6d",
+      "name": "Set Agent Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        660
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "fallbackMessage",
+              "value": "My apologies, I didn’t quite catch that. Could you please repeat your query, or say one of the main options: 'Billing', 'Network Issue', 'Recharge', or 'Talk to agent'?"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "98877665-5443-4922-8c1d-0e9f8a7b6c5d",
+      "name": "Set Fallback Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        920
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.some-tts-provider.com/v1/speech",
+        "authentication": "headerAuth",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
             {
               "name": "text",
-              "value": "🚨 URGENT TICKET CREATED: {{ $json.subject }}\nPriority: {{ $json.priority }}\nTicket ID: {{ $json.id }}\nRequires immediate attention!"
+              "value": "={{ $json.networkQuestion }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "urgent-slack-notification",
-      "name": "Urgent Slack Notification",
+      "id": "87766554-4332-4911-8c0d-9e8f7a6b5c4d",
+      "name": "TTS: Network Question",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [1780, 400]
+      "typeVersion": 4.1,
+      "position": [
+        2060,
+        140
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "url": "https://api.some-tts-provider.com/v1/speech",
+        "authentication": "headerAuth",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
             {
               "name": "text",
-              "value": "👑 VIP TICKET: {{ $json.subject }}\nPriority: {{ $json.priority }}\nTicket ID: {{ $json.id }}\nAssigned to VIP specialist"
+              "value": "={{ $json.rechargeQuestion }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "vip-slack-notification",
-      "name": "VIP Slack Notification",
+      "id": "76655443-3221-4900-8b9d-8e7f6a5b4c3d",
+      "name": "TTS: Recharge Question",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [1780, 600]
+      "typeVersion": 4.1,
+      "position": [
+        2060,
+        400
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "url": "https://api.some-tts-provider.com/v1/speech",
+        "authentication": "headerAuth",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
             {
               "name": "text",
-              "value": "🚨👑 URGENT VIP TICKET: {{ $json.subject }}\nPriority: {{ $json.priority }}\nTicket ID: {{ $json.id }}\nAssigned to senior VIP specialist - IMMEDIATE ACTION REQUIRED!"
+              "value": "={{ $json.agentMessage }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "urgent-vip-slack-notification",
-      "name": "Urgent VIP Slack Notification",
+      "id": "65544332-2110-48ff-8a8d-7d6e5f4a3b2c",
+      "name": "TTS: Agent Message",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [1780, 800]
+      "typeVersion": 4.1,
+      "position": [
+        2060,
+        660
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "url": "https://api.some-tts-provider.com/v1/speech",
+        "authentication": "headerAuth",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
             {
               "name": "text",
-              "value": "📋 General Ticket: {{ $json.subject }}\nPriority: {{ $json.priority }}\nTicket ID: {{ $json.id }}\nAssigned to general support"
+              "value": "={{ $json.fallbackMessage }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "general-slack-notification",
-      "name": "General Slack Notification",
+      "id": "54433221-1009-48ee-897d-6c5d4e3f2a1b",
+      "name": "TTS: Fallback Message",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [1780, 1000]
+      "typeVersion": 4.1,
+      "position": [
+        2060,
+        920
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "url": "https://your-live-support-system.com/api/route-call",
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "text",
-              "value": "🚨 URGENT TICKET: {{ $json.subject }}\nPriority: {{ $json.priority }}\nTicket ID: {{ $json.id }}\nAssigned to senior support team"
-            }
-          ]
-        },
-        "options": {}
+        "jsonBody": "={{ { \"callerId\": $startNode.json.query.callerId, \"initialQuery\": $('Simulate Voice Input').item.json.userInput } }}",
+        "options": {
+          "note": "This node simulates routing the call to a live agent system by calling a webhook."
+        }
       },
-      "id": "senior-slack-notification",
-      "name": "Senior Slack Notification",
+      "id": "43322110-0998-48dd-886d-5b4c3d2e1f0a",
+      "name": "Webhook: Route to Agent",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [1780, 1200]
+      "typeVersion": 4.1,
+      "position": [
+        2280,
+        660
+      ]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.emailjs.com/api/v1.0/email/send",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "authentication": "oAuth2",
+        "operation": "append",
+        "spreadsheetId": "={{ $env.GOOGLE_SHEET_ID }}",
+        "sheetName": "Conversation Logs",
+        "columns": {
+          "values": [
             {
-              "name": "Content-Type",
-              "value": "application/json"
+              "column": "A",
+              "value": "={{ $now.toFormat('yyyy-MM-dd HH:mm:ss') }}"
+            },
+            {
+              "column": "B",
+              "value": "={{ $('Simulate Voice Input').item.json.userInput }}"
+            },
+            {
+              "column": "C",
+              "value": "={{ $('Parse Intent JSON').item.json.intent }}"
+            },
+            {
+              "column": "D",
+              "value": ""
             }
           ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "service_id",
-              "value": "your_email_service_id"
-            },
-            {
-              "name": "template_id",
-              "value": "ticket_confirmation_template"
-            },
-            {
-              "name": "user_id",
-              "value": "your_user_id"
-            },
-            {
-              "name": "template_params",
-              "value": "{\"ticket_id\": \"{{ $json.id }}\", \"subject\": \"{{ $json.subject }}\", \"priority\": \"{{ $json.priority }}\", \"customer_email\": \"{{ $json.requester.email }}\"}"
-            }
-          ]
-        },
-        "options": {}
+        }
       },
-      "id": "send-email-confirmation",
-      "name": "Send Email Confirmation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [2000, 200]
+      "id": "32211009-9887-48cc-875d-4a3b2c1d0e9f",
+      "name": "Google Sheets: Log Initial Query",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1360,
+        540
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "={{ $env.N8N_GOOGLE_CREDENTIAL_ID }}",
+          "name": "Google Sheets Account"
+        }
+      }
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.emailjs.com/api/v1.0/email/send",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
+        "authentication": "oAuth2",
+        "operation": "append",
+        "spreadsheetId": "={{ $env.GOOGLE_SHEET_ID }}",
+        "sheetName": "Conversation Logs",
+        "columns": {
+          "values": [
             {
-              "name": "Content-Type",
-              "value": "application/json"
+              "column": "A",
+              "value": "={{ $now.toFormat('yyyy-MM-dd HH:mm:ss') }}"
+            },
+            {
+              "column": "B",
+              "value": "={{ $('Simulate Billing Answer').item.json.billingAnswer }}"
+            },
+            {
+              "column": "C",
+              "value": "Billing"
+            },
+            {
+              "column": "D",
+              "value": "={{ $('GEMINI: Resolve Billing').item.json.candidates[0].content.parts[0].text }}"
             }
           ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "service_id",
-              "value": "your_email_service_id"
-            },
-            {
-              "name": "template_id",
-              "value": "urgent_ticket_template"
-            },
-            {
-              "name": "user_id",
-              "value": "your_user_id"
-            },
-            {
-              "name": "template_params",
-              "value": "{\"ticket_id\": \"{{ $json.id }}\", \"subject\": \"{{ $json.subject }}\", \"priority\": \"{{ $json.priority }}\", \"customer_email\": \"{{ $json.requester.email }}\"}"
-            }
-          ]
-        },
-        "options": {}
+        }
       },
-      "id": "send-urgent-email",
-      "name": "Send Urgent Email",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [2000, 400]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.emailjs.com/api/v1.0/email/send",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "service_id",
-              "value": "your_email_service_id"
-            },
-            {
-              "name": "template_id",
-              "value": "vip_ticket_template"
-            },
-            {
-              "name": "user_id",
-              "value": "your_user_id"
-            },
-            {
-              "name": "template_params",
-              "value": "{\"ticket_id\": \"{{ $json.id }}\", \"subject\": \"{{ $json.subject }}\", \"priority\": \"{{ $json.priority }}\", \"customer_email\": \"{{ $json.requester.email }}\"}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "send-vip-email",
-      "name": "Send VIP Email",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [2000, 600]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.emailjs.com/api/v1.0/email/send",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "service_id",
-              "value": "your_email_service_id"
-            },
-            {
-              "name": "template_id",
-              "value": "urgent_vip_ticket_template"
-            },
-            {
-              "name": "user_id",
-              "value": "your_user_id"
-            },
-            {
-              "name": "template_params",
-              "value": "{\"ticket_id\": \"{{ $json.id }}\", \"subject\": \"{{ $json.subject }}\", \"priority\": \"{{ $json.priority }}\", \"customer_email\": \"{{ $json.requester.email }}\"}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "send-urgent-vip-email",
-      "name": "Send Urgent VIP Email",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [2000, 800]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.emailjs.com/api/v1.0/email/send",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "service_id",
-              "value": "your_email_service_id"
-            },
-            {
-              "name": "template_id",
-              "value": "general_ticket_template"
-            },
-            {
-              "name": "user_id",
-              "value": "your_user_id"
-            },
-            {
-              "name": "template_params",
-              "value": "{\"ticket_id\": \"{{ $json.id }}\", \"subject\": \"{{ $json.subject }}\", \"priority\": \"{{ $json.priority }}\", \"customer_email\": \"{{ $json.requester.email }}\"}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "send-general-email",
-      "name": "Send General Email",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [2000, 1000]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.emailjs.com/api/v1.0/email/send",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "service_id",
-              "value": "your_email_service_id"
-            },
-            {
-              "name": "template_id",
-              "value": "urgent_ticket_template"
-            },
-            {
-              "name": "user_id",
-              "value": "your_user_id"
-            },
-            {
-              "name": "template_params",
-              "value": "{\"ticket_id\": \"{{ $json.id }}\", \"subject\": \"{{ $json.subject }}\", \"priority\": \"{{ $json.priority }}\", \"customer_email\": \"{{ $json.requester.email }}\"}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "send-senior-email",
-      "name": "Send Senior Email",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 1,
-      "position": [2000, 1200]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Ticket processed successfully\",\n  \"ticket_id\": \"{{ $json.id }}\",\n  \"priority\": \"{{ $json.priority }}\",\n  \"assigned_to\": \"{{ $json.assignee_id }}\"\n}"
-      },
-      "id": "success-response",
-      "name": "Success Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [2220, 200]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Urgent ticket processed successfully\",\n  \"ticket_id\": \"{{ $json.id }}\",\n  \"priority\": \"{{ $json.priority }}\",\n  \"assigned_to\": \"{{ $json.assignee_id }}\"\n}"
-      },
-      "id": "urgent-success-response",
-      "name": "Urgent Success Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [2220, 400]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\n  \"success\": true,\n  \"message\": \"VIP ticket processed successfully\",\n  \"ticket_id\": \"{{ $json.id }}\",\n  \"priority\": \"{{ $json.priority }}\",\n  \"assigned_to\": \"{{ $json.assignee_id }}\"\n}"
-      },
-      "id": "vip-success-response",
-      "name": "VIP Success Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [2220, 600]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Urgent VIP ticket processed successfully\",\n  \"ticket_id\": \"{{ $json.id }}\",\n  \"priority\": \"{{ $json.priority }}\",\n  \"assigned_to\": \"{{ $json.assignee_id }}\"\n}"
-      },
-      "id": "urgent-vip-success-response",
-      "name": "Urgent VIP Success Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [2220, 800]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\n  \"success\": true,\n  \"message\": \"General ticket processed successfully\",\n  \"ticket_id\": \"{{ $json.id }}\",\n  \"priority\": \"{{ $json.priority }}\",\n  \"assigned_to\": \"{{ $json.assignee_id }}\"\n}"
-      },
-      "id": "general-success-response",
-      "name": "General Success Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [2220, 1000]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "{\n  \"success\": true,\n  \"message\": \"Urgent ticket assigned to senior team\",\n  \"ticket_id\": \"{{ $json.id }}\",\n  \"priority\": \"{{ $json.priority }}\",\n  \"assigned_to\": \"{{ $json.assignee_id }}\"\n}"
-      },
-      "id": "senior-success-response",
-      "name": "Senior Success Response",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [2220, 1200]
+      "id": "21100998-8776-48bb-864d-392a1b0c9d8e",
+      "name": "Google Sheets: Log Billing Response",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2740,
+        100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "={{ $env.N8N_GOOGLE_CREDENTIAL_ID }}",
+          "name": "Google Sheets Account"
+        }
+      }
     }
   ],
   "connections": {
-    "Webhook Trigger": {
+    "Start": {
       "main": [
         [
           {
-            "node": "Priority Router",
+            "node": "Webhook",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Priority Router": {
+    "Webhook": {
       "main": [
         [
           {
-            "node": "Create Ticket",
+            "node": "Set Welcome Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Welcome Message": {
+      "main": [
+        [
+          {
+            "node": "TTS: Welcome Greeting",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TTS: Welcome Greeting": {
+      "main": [
+        [
+          {
+            "node": "Simulate Voice Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulate Voice Input": {
+      "main": [
+        [
+          {
+            "node": "GEMINI: Classify Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GEMINI: Classify Intent": {
+      "main": [
+        [
+          {
+            "node": "Parse Intent JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Intent JSON": {
+      "main": [
+        [
+          {
+            "node": "IF: Route by Intent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets: Log Initial Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Set Billing Question",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Create Urgent Ticket",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Ticket": {
-      "main": [
-        [
-          {
-            "node": "Get Customer Info",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Urgent Ticket": {
-      "main": [
-        [
-          {
-            "node": "Get Urgent Customer Info",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Customer Info": {
-      "main": [
-        [
-          {
-            "node": "VIP Router",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Urgent Customer Info": {
-      "main": [
-        [
-          {
-            "node": "VIP Router Urgent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "VIP Router": {
-      "main": [
-        [
-          {
-            "node": "Assign VIP Agent",
+            "node": "Set Network Question",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Assign General Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "VIP Router Urgent": {
-      "main": [
-        [
-          {
-            "node": "Assign Senior VIP Agent",
+            "node": "Set Recharge Question",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Assign Senior Agent",
+            "node": "Set Agent Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Fallback Message",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Assign VIP Agent": {
+    "Set Billing Question": {
       "main": [
         [
           {
-            "node": "Add VIP Comment",
+            "node": "TTS: Billing Question",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Assign Senior VIP Agent": {
+    "TTS: Billing Question": {
       "main": [
         [
           {
-            "node": "Add Urgent VIP Comment",
+            "node": "Simulate Billing Answer",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Assign General Agent": {
+    "Simulate Billing Answer": {
       "main": [
         [
           {
-            "node": "Add Auto Comment",
+            "node": "GEMINI: Resolve Billing",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Assign Senior Agent": {
+    "GEMINI: Resolve Billing": {
       "main": [
         [
           {
-            "node": "Add Senior Comment",
+            "node": "TTS: Billing Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Add Auto Comment": {
+    "TTS: Billing Response": {
       "main": [
         [
           {
-            "node": "Slack Notification",
+            "node": "Google Sheets: Log Billing Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Add Urgent Comment": {
+    "Set Network Question": {
       "main": [
         [
           {
-            "node": "Urgent Slack Notification",
+            "node": "TTS: Network Question",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Add VIP Comment": {
+    "Set Recharge Question": {
       "main": [
         [
           {
-            "node": "VIP Slack Notification",
+            "node": "TTS: Recharge Question",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Add Urgent VIP Comment": {
+    "Set Agent Message": {
       "main": [
         [
           {
-            "node": "Urgent VIP Slack Notification",
+            "node": "TTS: Agent Message",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Add General Comment": {
+    "TTS: Agent Message": {
       "main": [
         [
           {
-            "node": "General Slack Notification",
+            "node": "Webhook: Route to Agent",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Add Senior Comment": {
+    "Set Fallback Message": {
       "main": [
         [
           {
-            "node": "Senior Slack Notification",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Slack Notification": {
-      "main": [
-        [
-          {
-            "node": "Send Email Confirmation",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Urgent Slack Notification": {
-      "main": [
-        [
-          {
-            "node": "Send Urgent Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "VIP Slack Notification": {
-      "main": [
-        [
-          {
-            "node": "Send VIP Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Urgent VIP Slack Notification": {
-      "main": [
-        [
-          {
-            "node": "Send Urgent VIP Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "General Slack Notification": {
-      "main": [
-        [
-          {
-            "node": "Send General Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Senior Slack Notification": {
-      "main": [
-        [
-          {
-            "node": "Send Senior Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send Email Confirmation": {
-      "main": [
-        [
-          {
-            "node": "Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send Urgent Email": {
-      "main": [
-        [
-          {
-            "node": "Urgent Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send VIP Email": {
-      "main": [
-        [
-          {
-            "node": "VIP Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send Urgent VIP Email": {
-      "main": [
-        [
-          {
-            "node": "Urgent VIP Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send General Email": {
-      "main": [
-        [
-          {
-            "node": "General Success Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send Senior Email": {
-      "main": [
-        [
-          {
-            "node": "Senior Success Response",
+            "node": "TTS: Fallback Message",
             "type": "main",
             "index": 0
           }
@@ -1174,19 +784,14 @@
     }
   },
   "pinData": {},
-  "settings": {
-    "executionOrder": "v1"
-  },
+  "settings": {},
   "staticData": null,
   "tags": [
-    {
-      "createdAt": "2024-01-01T00:00:00.000Z",
-      "updatedAt": "2024-01-01T00:00:00.000Z",
-      "id": "customer-care",
-      "name": "Customer Care"
-    }
+    "ai",
+    "gemini",
+    "voice",
+    "ivr",
+    "customer service"
   ],
-  "triggerCount": 1,
-  "updatedAt": "2024-01-01T00:00:00.000Z",
-  "versionId": "1"
-} 
+  "versionId": "b1a0c9d8-e7f6-4a5b-8c4d-3e2f1a0b9c8d"
+}
